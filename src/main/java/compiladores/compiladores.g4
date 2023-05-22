@@ -1,9 +1,9 @@
 grammar compiladores;
 
-@header {
-package compiladores;
+// @header {
+// package compiladores;
 
-}
+// }
 
 fragment LETRA : [A-Za-z] ;
 fragment DIGITO : [0-9] ;
@@ -23,6 +23,8 @@ MULT  : '*'  ;
 DIV   : '/'  ;
 MOD   : '%'  ;
 NOT   : '!'  ;
+OR    : '||' ;
+AND   : '&&' ;
 COMPARADOR: '==' | '!=' | '>' | '>=' | '<' | '<='  ;
 
 // Bucles
@@ -38,23 +40,9 @@ NUMERO : DIGITO+ ;
 INT :    'int' ;   
 DOUBLE : 'double' ;                                   
 
-// OTRO : . ;
+OTRO : . ;
 
 ID : (LETRA | '_')(LETRA | DIGITO | '_')* ;
-
-// s : ID     { System.out.println("ID ->" + $ID.getText() + "<--"); }         s
-//   | NUMERO { System.out.println("NUMERO ->" + $NUMERO.getText() + "<--"); } s
-//   | OTRO   { System.out.println("Otro ->" + $OTRO.getText() + "<--"); }     s
-//   | EOF
-//   ;
-
-// si : s
-//    | EOF
-//    ;
-
-// s : PA s PC s
-//   |
-//   ;
 
 programa : instrucciones EOF ;
 
@@ -65,6 +53,7 @@ instrucciones : instruccion instrucciones
 instruccion : asignacion
             | declaracion
             | bloque
+            | iwhile
             ;
 
 bloque : LLA instrucciones LLC ;
@@ -73,15 +62,13 @@ asignacion : ID ASIGN expresion PYC;
 
 declaracion : INT ID inicializacion listaid PYC ;
 
-inicializacion : ASIGN NUMERO
+inicializacion : ASIGN expresion
                |
                ;
 
 listaid : COMA ID inicializacion listaid
         |
         ;
-
-// X = ( 3 + 5 ) / 4; // ID ASSIGN expresion PYC
 
 expresion : termino exp ;
 
@@ -102,6 +89,10 @@ factor : NUMERO
        | ID
        | PA expresion PC 
        ;
+
+iwhile : WHILE PA comparacion PC (bloque|instruccion);
+
+comparacion : (NUMERO|ID) COMPARADOR (NUMERO|ID) ;
 
 /*
 ---------------------- MI CODIGO ----------------------

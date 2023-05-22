@@ -1,3 +1,63 @@
-while (x == 0) {
-    x = 5;
+- PRUEBA PARA EL WHILE
+while ((x == 50) && (contador >= 10)) {
+
+}
+
+while ((x == 50) && !contador) {
+
+}
+
+while (!n) {
+
+}
+
+while (contador < 5) {
+    
+}
+
+while (true) {
+
+}
+
+while (1) {
+    
+}
+-------------------------------------------------------------------------
+- PRUEBA PARA EL IF
+if ((x == 50) && (contador >= 10)) {
+
+}
+
+if ((x == 50) && !contador) {
+
+}
+
+if (!n) {
+
+}
+
+if (contador < 5) {
+    
+}
+
+if (true) {
+
+}
+
+if (1) {
+    
+}
+--------------------------------------------------------------------------
+- PRUEBA PARA EL FOR
+
+for (int i = 0; i < 10; i++) {
+
+}
+
+for (int i = 0; i < 10; i--) {
+
+}
+
+for (int i = 0, j = 10; i < j; i++, j--) {
+
 }

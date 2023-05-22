@@ -23,12 +23,16 @@ MULT  : '*'  ;
 DIV   : '/'  ;
 MOD   : '%'  ;
 NOT   : '!'  ;
-OR    : '||' ;
 AND   : '&&' ;
+OR    : '||' ;
+INCR  : '++' ;
+DECR  : '--' ;
 COMPARADOR: '==' | '!=' | '>' | '>=' | '<' | '<='  ;
 
 // Bucles
 WHILE : 'while' ;
+IF    : 'if'    ;
+FOR   : 'for'   ;
 
 //Regla para los espacios en blanco
 WS : [ \n\t\r] -> skip ;
@@ -39,8 +43,6 @@ NUMERO : DIGITO+ ;
 // Tipos de datos
 INT :    'int' ;   
 DOUBLE : 'double' ;                                   
-
-OTRO : . ;
 
 ID : (LETRA | '_')(LETRA | DIGITO | '_')* ;
 
@@ -54,6 +56,8 @@ instruccion : asignacion
             | declaracion
             | bloque
             | iwhile
+            | iif
+            | ifor
             ;
 
 bloque : LLA instrucciones LLC ;
@@ -62,7 +66,7 @@ asignacion : ID ASIGN expresion PYC;
 
 declaracion : INT ID inicializacion listaid PYC ;
 
-inicializacion : ASIGN expresion
+inicializacion : ASIGN NUMERO
                |
                ;
 
@@ -90,10 +94,43 @@ factor : NUMERO
        | PA expresion PC 
        ;
 
-iwhile : WHILE PA comparacion PC (bloque|instruccion);
+iwhile : WHILE PA comparacion listacomp PC (bloque|instruccion);
 
-comparacion : (NUMERO|ID) COMPARADOR (NUMERO|ID) ;
+iif : IF PA comparacion listacomp PC (bloque|instruccion) ;
 
+comparacion : PA (ID|NUMERO) COMPARADOR (ID|NUMERO) PC
+            | (ID|NUMERO) COMPARADOR (ID|NUMERO)
+            | NOT (ID|NUMERO)
+            | (ID|NUMERO)
+            ;
+
+listacomp : AND comparacion listacomp
+          | OR comparacion listacomp
+          |
+          ;
+
+ifor : FOR PA declaracionFor PYC condicionFor PYC incrementoFor PC (bloque|instruccion) ;
+
+declaracionFor : INT ID inicializacionFor listaidFor ;
+
+inicializacionFor : ASIGN NUMERO
+                  |
+                  ;
+
+listaidFor : COMA ID inicializacionFor listaidFor
+           |
+           ;
+
+condicionFor : (ID|NUMERO) COMPARADOR (ID|NUMERO) ;
+
+incrementoFor : (ID|NUMERO) INCR listaIncrFor
+              | (ID|NUMERO) DECR listaIncrFor
+              ;
+
+listaIncrFor : COMA incrementoFor listaIncrFor 
+             |
+             ;
+        
 /*
 ---------------------- MI CODIGO ----------------------
 
@@ -178,5 +215,4 @@ factor : NUMERO
 iwhile : WHILE PA comparacion PC (bloque|instruccion);
 
 comparacion : (NUMERO|ID) COMPARADOR (NUMERO|ID) ;
-
- */
+*/

@@ -8,6 +8,7 @@ grammar compiladores;
 fragment LETRA : [A-Za-z] ;
 fragment DIGITO : [0-9] ;
 
+COMA  : ','  ;
 PYC   : ';'  ;
 PA    : '('  ;
 PC    : ')'  ;
@@ -16,7 +17,6 @@ LLC   : '}'  ;
 CA    : '['  ;
 CC    : ']'  ;
 ASIGN : '='  ;
-COMA  : ','  ;
 SUMA  : '+'  ;
 RESTA : '-'  ;
 MULT  : '*'  ;
@@ -27,6 +27,8 @@ AND   : '&&' ;
 OR    : '||' ;
 INCR  : '++' ;
 DECR  : '--' ;
+INCRI : '+=' ;
+DECRI : '-=' ;
 COMPARADOR: '==' | '!=' | '>' | '>=' | '<' | '<='  ;
 
 // Bucles
@@ -41,10 +43,13 @@ WS : [ \n\t\r] -> skip ;
 NUMERO : DIGITO+ ;
 
 // Tipos de datos
-INT :    'int' ;   
-DOUBLE : 'double' ;                                   
+TIPO : 'int' | 'double' | 'float' ;                  
 
 ID : (LETRA | '_')(LETRA | DIGITO | '_')* ;
+
+/* ---------------------------------------------------- */
+
+/*----------------- Bloque de programa -----------------*/
 
 programa : instrucciones EOF ;
 
@@ -58,13 +63,20 @@ instruccion : asignacion
             | iwhile
             | iif
             | ifor
+            | prototipoFuncion
+            | declaracionFuncion
+            | llamadaFuncion
             ;
 
 bloque : LLA instrucciones LLC ;
 
+/* ---------------------------------------------------- */
+
+/* ------ Asignacion y declaracion de variables --------*/
+
 asignacion : ID ASIGN expresion PYC;
 
-declaracion : INT ID inicializacion listaid PYC ;
+declaracion : TIPO ID inicializacion listaid PYC ;
 
 inicializacion : ASIGN NUMERO
                |
@@ -73,6 +85,10 @@ inicializacion : ASIGN NUMERO
 listaid : COMA ID inicializacion listaid
         |
         ;
+
+/* ---------------------------------------------------- */
+
+/* -------------------- Expresiones --------------------*/
 
 expresion : termino exp ;
 
@@ -94,6 +110,10 @@ factor : NUMERO
        | PA expresion PC 
        ;
 
+/* ---------------------------------------------------- */
+
+/*------------------ Bucle while e if ------------------*/
+
 iwhile : WHILE PA comparacion listacomp PC (bloque|instruccion);
 
 iif : IF PA comparacion listacomp PC (bloque|instruccion) ;
@@ -109,9 +129,13 @@ listacomp : AND comparacion listacomp
           |
           ;
 
+/* ---------------------------------------------------- */
+
+/*---------------------- Bucle for ---------------------*/
+
 ifor : FOR PA declaracionFor PYC condicionFor PYC incrementoFor PC (bloque|instruccion) ;
 
-declaracionFor : INT ID inicializacionFor listaidFor ;
+declaracionFor : TIPO ID inicializacionFor listaidFor ;
 
 inicializacionFor : ASIGN NUMERO
                   |
@@ -123,96 +147,60 @@ listaidFor : COMA ID inicializacionFor listaidFor
 
 condicionFor : (ID|NUMERO) COMPARADOR (ID|NUMERO) ;
 
-incrementoFor : (ID|NUMERO) INCR listaIncrFor
-              | (ID|NUMERO) DECR listaIncrFor
+incrementoFor : ID INCR listaIncrFor
+              | ID DECR listaIncrFor
+              | ID INCRI NUMERO listaIncrFor
+              | ID DECRI NUMERO listaIncrFor
+              |
               ;
 
 listaIncrFor : COMA incrementoFor listaIncrFor 
              |
              ;
-        
-/*
----------------------- MI CODIGO ----------------------
 
-// Tokens o reglas gramaticales: minuscula
-// Reglas lexicas: MAYUSCULA
+/* ---------------------------------------------------- */
 
-// Analisis sintactico descendente:
-// match y derivar
+/*----------------- Prototipo de funcion ---------------*/
 
-// Analisis sintactico ascendente:
-// desplazar y reducir
+prototipoFuncion : TIPO ID PA parametrosProt PC PYC
+                 ;
 
-// si : s 
-//    | EOF
-//    ;
-
-// // PA (Abre parentesis) PC (Cierra parentesis)
-// s : PA s PC s 
-//   | LLA s LLC s
-//   | CA s CC s
-//   |
-//   ;
-
-// Un programa es un conjunto de instrucciones hasta final de archivo
-programa : instrucciones EOF ;
-
-// las instrucciones 
-instrucciones : instruccion instrucciones
-              |   
-              ;
-
-// las instrucciones son:
-instruccion : asignacion 
-            | declaracion
-            | bloque
-            | iwhile
-            ;
-
-// Bloque de codigo
-bloque : LLA instrucciones LLC ;
-
-// Una asignacion es:
-asignacion : ID ASIGN (NUMERO|ID) PYC ;
-
-// Una declaracion es:
-// una variable de tal tipo que se llama asi:
-// puede ser inicializada o puede ser un listado de variables
-declaracion : (INT|DOUBLE) ID inicializacion listaid PYC ;
-
-// una inicializacion
-inicializacion : ASIGN NUMERO 
-               |    
+parametrosProt : TIPO ID listaParamProt 
+               | TIPO listaParamProt
+               |
                ;
 
-// lista de valores
-listaid : COMA ID inicializacion listaid
-        |
-        ;
+listaParamProt : COMA TIPO listaParamProt
+               | COMA TIPO ID listaParamProt
+               |
+               ;
 
-/*
-expresion : termino exp ;
+/* ---------------------------------------------------- */
 
-exp : SUMA  termino exp 
-    | RESTA termino exp 
-    |
-    ;
+/* ---------- Implementacion de funciones --------------*/
 
-termino : factor term ;
+declaracionFuncion : TIPO ID PA parametrosDecl PC bloque;
 
-term : MULT factor term
-     | DIV  factor term
-     | MOD  factor term
-     | 
-     ;
+parametrosDecl : TIPO ID listaParamDecl
+               | 
+               ;
 
-// con los parentesis se resetea la prioridad 
-factor : NUMERO 
-       | ID
-       | PA expresion PC
-       ;
+listaParamDecl : COMA TIPO ID listaParamDecl 
+               |
+               ;
 
-iwhile : WHILE PA comparacion PC (bloque|instruccion);
+/* ---------------------------------------------------- */
 
-comparacion : (NUMERO|ID) COMPARADOR (NUMERO|ID) ;
-*/
+/* -------------- Llamadas a funciones -----------------*/
+
+llamadaFuncion : ID PA parametrosLlam PC PYC ;
+
+parametrosLlam : ID listaParamLlam 
+               |
+               ;
+
+listaParamLlam : COMA ID listaParamLlam 
+               |
+               ;
+
+/* ---------------------------------------------------- */

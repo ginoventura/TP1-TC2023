@@ -1,9 +1,9 @@
 grammar compiladores;
 
-// @header {
-// package compiladores;
+@header {
+package compiladores;
 
-// }
+}
 
 fragment LETRA : [A-Za-z] ;
 fragment DIGITO : [0-9] ;
@@ -35,15 +35,20 @@ COMPARADOR: '==' | '!=' | '>' | '>=' | '<' | '<='  ;
 WHILE : 'while' ;
 IF    : 'if'    ;
 FOR   : 'for'   ;
+ELSE  : 'else'  ;
+
+RETURN: 'return';
 
 //Regla para los espacios en blanco
 WS : [ \n\t\r] -> skip ;
 
 // Numeros
-NUMERO : DIGITO+ ;
+ENTERO  : DIGITO+         ;
+DECIMAL : ENTERO'.'ENTERO ;
 
 // Tipos de datos
-TIPO : 'int' | 'double' | 'float' ;                  
+INT    : 'int'    ; 
+DOUBLE : 'double' ;                  
 
 ID : (LETRA | '_')(LETRA | DIGITO | '_')* ;
 
@@ -57,8 +62,8 @@ instrucciones : instruccion instrucciones
               |
               ;
 
-instruccion : asignacion
-            | declaracion
+instruccion : declaracion
+            | asignacion
             | bloque
             | iwhile
             | iif
@@ -74,17 +79,21 @@ bloque : LLA instrucciones LLC ;
 
 /* ------ Asignacion y declaracion de variables --------*/
 
-asignacion : ID ASIGN expresion PYC;
+declaracion : tipoDato ID inicializacion listaid PYC ;
 
-declaracion : TIPO ID inicializacion listaid PYC ;
+asignacion : ID ASIGN expresion PYC ;
 
-inicializacion : ASIGN NUMERO
+inicializacion : ASIGN (ENTERO|DECIMAL)
                |
                ;
 
 listaid : COMA ID inicializacion listaid
         |
         ;
+
+tipoDato : INT 
+         | DOUBLE
+         ;
 
 /* ---------------------------------------------------- */
 
@@ -105,7 +114,7 @@ term : MULT factor term
      |
      ;
 
-factor : NUMERO
+factor : (ENTERO|DECIMAL)
        | ID
        | PA expresion PC 
        ;
@@ -116,12 +125,13 @@ factor : NUMERO
 
 iwhile : WHILE PA comparacion listacomp PC (bloque|instruccion);
 
-iif : IF PA comparacion listacomp PC (bloque|instruccion) ;
+iif : IF PA comparacion listacomp PC (bloque|instruccion) 
+    | IF PA comparacion listacomp PC bloque ELSE bloque;
 
-comparacion : PA (ID|NUMERO) COMPARADOR (ID|NUMERO) PC
-            | (ID|NUMERO) COMPARADOR (ID|NUMERO)
-            | NOT (ID|NUMERO)
-            | (ID|NUMERO)
+comparacion : PA (ID|(ENTERO|DECIMAL)) COMPARADOR (ID|(ENTERO|DECIMAL)) PC
+            | (ID|(ENTERO|DECIMAL)) COMPARADOR (ID|(ENTERO|DECIMAL))
+            | NOT (ID|(ENTERO|DECIMAL))
+            | (ID|(ENTERO|DECIMAL))
             ;
 
 listacomp : AND comparacion listacomp
@@ -135,9 +145,9 @@ listacomp : AND comparacion listacomp
 
 ifor : FOR PA declaracionFor PYC condicionFor PYC incrementoFor PC (bloque|instruccion) ;
 
-declaracionFor : TIPO ID inicializacionFor listaidFor ;
+declaracionFor : tipoDato ID inicializacionFor listaidFor ;
 
-inicializacionFor : ASIGN NUMERO
+inicializacionFor : ASIGN (ENTERO|DECIMAL)
                   |
                   ;
 
@@ -145,12 +155,12 @@ listaidFor : COMA ID inicializacionFor listaidFor
            |
            ;
 
-condicionFor : (ID|NUMERO) COMPARADOR (ID|NUMERO) ;
+condicionFor : (ID|(ENTERO|DECIMAL)) COMPARADOR (ID|(ENTERO|DECIMAL)) ;
 
 incrementoFor : ID INCR listaIncrFor
               | ID DECR listaIncrFor
-              | ID INCRI NUMERO listaIncrFor
-              | ID DECRI NUMERO listaIncrFor
+              | ID INCRI (ENTERO|DECIMAL) listaIncrFor
+              | ID DECRI (ENTERO|DECIMAL) listaIncrFor
               |
               ;
 
@@ -162,16 +172,16 @@ listaIncrFor : COMA incrementoFor listaIncrFor
 
 /*----------------- Prototipo de funcion ---------------*/
 
-prototipoFuncion : TIPO ID PA parametrosProt PC PYC
+prototipoFuncion : tipoDato ID PA parametrosProt PC PYC
                  ;
 
-parametrosProt : TIPO ID listaParamProt 
-               | TIPO listaParamProt
+parametrosProt : tipoDato ID listaParamProt 
+               | tipoDato listaParamProt
                |
                ;
 
-listaParamProt : COMA TIPO listaParamProt
-               | COMA TIPO ID listaParamProt
+listaParamProt : COMA tipoDato listaParamProt
+               | COMA tipoDato ID listaParamProt
                |
                ;
 
@@ -179,13 +189,13 @@ listaParamProt : COMA TIPO listaParamProt
 
 /* ---------- Implementacion de funciones --------------*/
 
-declaracionFuncion : TIPO ID PA parametrosDecl PC bloque;
+declaracionFuncion : tipoDato ID PA parametrosDecl PC bloque;
 
-parametrosDecl : TIPO ID listaParamDecl
+parametrosDecl : tipoDato ID listaParamDecl
                | 
                ;
 
-listaParamDecl : COMA TIPO ID listaParamDecl 
+listaParamDecl : COMA tipoDato ID listaParamDecl 
                |
                ;
 

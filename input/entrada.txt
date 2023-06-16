@@ -1,1 +1,2 @@
-suma(a, b);
+int x;
+

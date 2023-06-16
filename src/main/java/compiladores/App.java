@@ -10,8 +10,8 @@ public class App {
         System.out.println("TP2 / Arreguez - Ventura");
         // create a CharStream that reads from file
         CharStream input = CharStreams.fromFileName("input/entrada.txt");
+        // System.out.println(input.getSourceName());
         
-        System.out.println(input.getSourceName());
         // create a lexer that feeds off of input CharStream
         compiladoresLexer lexer = new compiladoresLexer(input);
         

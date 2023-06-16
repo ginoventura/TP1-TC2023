@@ -29,8 +29,6 @@ public class App {
 
         parser.addParseListener(escucha);
 
-        System.out.println("\n");
-
         parser.programa();        
     }
 }

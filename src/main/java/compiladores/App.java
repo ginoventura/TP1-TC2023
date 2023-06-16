@@ -1,43 +1,36 @@
 package compiladores;
 
-// import org.antlr.v4.runtime.CharStream;
-// import org.antlr.v4.runtime.CharStreams;
-// import org.antlr.v4.runtime.CommonTokenStream;
+import compiladores.tablaSimbolos.ErrorsListener;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 
-// Las diferentes entradas se explicaran oportunamente
 public class App {
     public static void main(String[] args) throws Exception {
-        System.out.println("Hello, Compilador!!!");
+        System.out.println("TP2 / Arreguez - Ventura");
         // create a CharStream that reads from file
-        // CharStream input = CharStreams.fromFileName("input/entrada.txt");
-
+        CharStream input = CharStreams.fromFileName("input/entrada.txt");
+        
+        System.out.println(input.getSourceName());
         // create a lexer that feeds off of input CharStream
-        // compiladoresLexer lexer = new compiladoresLexer(input);
+        compiladoresLexer lexer = new compiladoresLexer(input);
         
         // create a buffer of tokens pulled from the lexer
-        // CommonTokenStream tokens = new CommonTokenStream(lexer);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
         
         // create a parser that feeds off the tokens buffer
-        // compiladoresParser parser = new compiladoresParser(tokens);
+        compiladoresParser parser = new compiladoresParser(tokens);
                 
-        // create Listener
-        // ExpRegBaseListener escucha = new Escucha();
+        ErrorsListener errorsListener = new ErrorsListener();
+        parser.removeErrorListeners();
+        parser.addErrorListener(errorsListener);
 
-        // Conecto el objeto con Listeners al parser
-        // parser.addParseListener(escucha);
+        compiladoresBaseListener escucha = new MiListener();
 
-        // Solicito al parser que comience indicando una regla gramatical
-        // En este caso la regla es el simbolo inicial
-        // parser.s();
-        // ParseTree tree =  parser.s();
-        // Conectamos el visitor
-        // Caminante visitor = new Caminante();
-        // visitor.visit(tree);
-        // System.out.println(visitor);
-        // System.out.println(visitor.getErrorNodes());
-        // Imprime el arbol obtenido
-        // System.out.println(tree.toStringTree(parser));
-        // System.out.println(escucha);
-        
+        parser.addParseListener(escucha);
+
+        System.out.println("\n");
+
+        parser.programa();        
     }
 }

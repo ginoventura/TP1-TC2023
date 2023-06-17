@@ -23,11 +23,12 @@ public class MiListener extends compiladoresBaseListener {
         return "[" + token.getLine() + ":" + token.getCharPositionInLine() + "]";
     }
 
-    private Id getID(String id) {return simbolos.buscarIdGlobal(id); }
-
-    private Id getIDLocal(String id) {return simbolos.buscarIdLocal(id); }
-
-    private boolean esFuncion(Id id){ return id instanceof Funcion; }
+    private boolean coincideTipoDato(String tipoDato, String tipoDatoFactor) {
+        if (tipoDato.equals(tipoDatoFactor))
+            return true;
+        else
+            return false;
+    }
 
     private String getTipoString(int type) {
         switch (type) {
@@ -40,11 +41,43 @@ public class MiListener extends compiladoresBaseListener {
         }
     }
 
-    private boolean coincideTipoDato(String tipoDato, String tipoDatoFactor) {
-        if (tipoDato.equals(tipoDatoFactor))
-            return true;
-        else
-            return false;
+    private Id getID(String id) {return simbolos.buscarIdGlobal(id); }
+
+    private Id getIDLocal(String id) {return simbolos.buscarIdLocal(id); }
+
+    private boolean esFuncion(Id id){ return id instanceof Funcion; }
+
+    private Collection<ParseTree> encontrarFactoresSinArgumentos(ParseTree ctx){
+        Collection<ParseTree> factores = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_factor);
+        Collection<ParseTree> llamadaFuncion = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_llamadaFuncion);
+        Collection<ParseTree> factoresLlamadaFuncion;
+        for (ParseTree parseTree : llamadaFuncion) {
+            factoresLlamadaFuncion = Trees.findAllRuleNodes(parseTree, compiladoresParser.RULE_factor);
+            factores.removeAll(factoresLlamadaFuncion);
+        }
+        return factores;
+    }
+
+    private boolean tieneParametros(List<Variable> parametros, String nameVar){
+        return parametros.stream()
+                         .filter(param -> param.getTokenNombre().equals(nameVar))
+                         .findFirst()
+                         .isPresent();
+    }
+
+    private List<Variable> getParametros(ParametrosContext ctx){
+        List<Variable> params = new ArrayList<Variable>();
+        Collection<ParseTree> parametros = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_declaracion);
+        for (ParseTree parseTree : parametros) {
+            DeclaracionContext decl = (DeclaracionContext)parseTree;
+            if(tieneParametros(params, decl.ID().getText())){
+                errores.idRedefinido(posicionDelToken(ctx.getStart()), decl.ID().getText());
+                return null;
+            }
+            Variable var = new Variable(true, false, decl.tipoDato().getText(), decl.ID().getText());
+            params.add(var);
+        }
+        return params;
     }
 
     private boolean analisisFactores(Id caller, String tipoDato, Collection<ParseTree> factores) {
@@ -98,7 +131,7 @@ public class MiListener extends compiladoresBaseListener {
         if (getIDLocal(ctx.ID().getText()) == null) {
             Id id = new Variable(false, false, ctx.tipoDato().getText(), ctx.ID().getText());
             simbolos.agregarEnContextoActual(ctx.ID().getText(), id);
-            if (ctx.inicializacion() != null) {
+            if (ctx.asign() != null) {
                 if(analisisFactores(null, ctx.tipoDato().getText(), factores))
                     id.setInicializado(true);
             }
@@ -108,10 +141,10 @@ public class MiListener extends compiladoresBaseListener {
         }
     }
 
-    private Id procesarFuncion(DeclaracionFuncionContext ctx){
+    private Id procesarFuncion(DefinicionFuncionContext ctx){
         Id id = getIDLocal(ctx.ID().getText());
         if(id == null){
-            List<Variable> parametros = getParametros(ctx.parametrosDecl());
+            List<Variable> parametros = getParametros(ctx.parametros());
             if(parametros != null){
                 Id idFunction = new Funcion(true, false, ctx.tipoDato().getText(), ctx.ID().getText(), parametros);
                 simbolos.agregarEnContextoActual(ctx.ID().getText(), idFunction);
@@ -122,7 +155,7 @@ public class MiListener extends compiladoresBaseListener {
         }else if(esFuncion(id) && id.isInicializado()){
             errores.idDeclarado(posicionDelToken(ctx.getStart()), ctx.ID().getText());
         }else if(esFuncion(id) && !id.isInicializado()){
-            if(!((Funcion)id).parametrosSonIguales(getParametros(ctx.parametrosDecl())))
+            if(!((Funcion)id).parametrosSonIguales(getParametros(ctx.parametros())))
                 errores.ordenPrototipo(posicionDelToken(ctx.getStart()));
             else
                 id.setInicializado(true);
@@ -133,9 +166,9 @@ public class MiListener extends compiladoresBaseListener {
 
     private void procesarLlamadaFuncion(String tipoDato, LlamadaFuncionContext ctx){
         Id id = getID(ctx.ID().getText());
-        Collection<ParseTree> operations = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_llamadaFuncion);
+        Collection<ParseTree> operations = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_operacion);
         Object[] oper = operations.toArray();
-        Collection<ParseTree> factorCountFirstOperation = Trees.findAllRuleNodes((ParseTree)oper[0], compiladoresParser.RULE_listaParamLlam);
+        Collection<ParseTree> factorCountFirstOperation = Trees.findAllRuleNodes((ParseTree)oper[0], compiladoresParser.RULE_factor);
 
         if(id == null)
             errores.idNoDeclarado(posicionDelToken(ctx.getStart()), ctx.ID().getText());
@@ -152,7 +185,7 @@ public class MiListener extends compiladoresBaseListener {
             id.setUsado(true);
             for(int i=0; i < parametros.size();  i++){
                 if(i > (operations.size() - 1)) { break; }
-                factores = Trees.findAllRuleNodes((ParseTree)oper[i], compiladoresParser.RULE_listaParamLlam);
+                factores = Trees.findAllRuleNodes((ParseTree)oper[i], compiladoresParser.RULE_factor);
                 analisisFactores(id, parametros.get(i).getTipoDato(), factores);
             }
         }else if(esFuncion(id) && !id.isInicializado()){
@@ -160,38 +193,18 @@ public class MiListener extends compiladoresBaseListener {
         }else if(!esFuncion(id))
             errores.declaradoComoVariable(posicionDelToken(ctx.getStart()), id.getTokenNombre());
     }
-
-    private boolean tieneParametros(List<Variable> parametros, String nameVar){
-        return parametros.stream()
-                         .filter(param -> param.getTokenNombre().equals(nameVar))
-                         .findFirst()
-                         .isPresent();
-    }
-
-    private List<Variable> getParametros(ParametrosDeclContext ctx){
-        List<Variable> params = new ArrayList<Variable>();
-        Collection<ParseTree> parametros = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_declaracionFuncion);
-        for (ParseTree parseTree : parametros) {
-            DeclaracionContext decl = (DeclaracionContext)parseTree;
-            if(tieneParametros(params, decl.ID().getText())){
-                errores.idRedefinido(posicionDelToken(ctx.getStart()), decl.ID().getText());
-                return null;
-            }
-            Variable var = new Variable(true, false, decl.tipoDato().getText(), decl.ID().getText());
-            params.add(var);
+    
+    private void procesarReturn(DefinicionFuncionContext ctx){
+        Collection<ParseTree> returns = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_retorno);
+        if(ctx.tipoDato().getText().equals("void") && returns.size() != 0)
+            errores.retornoFuncionVoid(posicionDelToken(((RetornoContext)(returns.toArray()[0])).getStart()));
+        else if(!ctx.tipoDato().getText().equals("void") && !ctx.ID().getText().equals("main") && returns.size() == 0)
+            errores.noRetorno(posicionDelToken(ctx.getStart()));
+        else if(!ctx.tipoDato().getText().equals("void") && returns.size() > 0){
+            ParseTree ret = (ParseTree)(returns.toArray()[0]);
+            Collection<ParseTree> factores = encontrarFactoresSinArgumentos(ret);
+            analisisFactores(null, ctx.tipoDato().getText(), factores);
         }
-        return params;
-    }
-
-    private Collection<ParseTree> encontrarFactoresSinArgumentos(ParseTree ctx){
-        Collection<ParseTree> factores = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_factor);
-        Collection<ParseTree> llamadaFuncion = Trees.findAllRuleNodes(ctx, compiladoresParser.RULE_llamadaFuncion);
-        Collection<ParseTree> factoresLlamadaFuncion;
-        for (ParseTree parseTree : llamadaFuncion) {
-            factoresLlamadaFuncion = Trees.findAllRuleNodes(parseTree, compiladoresParser.RULE_factor);
-            factores.removeAll(factoresLlamadaFuncion);
-        }
-        return factores;
     }
 
     @Override
@@ -213,12 +226,22 @@ public class MiListener extends compiladoresBaseListener {
         procesarInstruccionAsignacion(ctx);
     }
 
+    @Override 
+    public void exitOperacion(OperacionContext ctx) { 
+        if( !(ctx.getParent() instanceof AsignContext) &&
+                !(ctx.getParent() instanceof ArgumentosContext) &&
+                !(ctx.getParent() instanceof ArgsContext)){
+            Collection<ParseTree> factores = encontrarFactoresSinArgumentos(ctx);
+            analisisFactores(null, null, factores);
+        }
+    }
+
     @Override
     public void exitDeclaracionFuncion(DeclaracionFuncionContext ctx) {
         if(simbolos.getTablaSimbolos().size() == 1){
             Id id = getID(ctx.ID().getText()); 
             if(id == null){
-                List<Variable> parametros = getParametros(ctx.parametrosDecl());
+                List<Variable> parametros = getParametros(ctx.parametros());
                 if(parametros != null){
                     Id prototype = new Funcion(false, false, ctx.tipoDato().getText(), ctx.ID().getText(), parametros);
                     simbolos.agregarEnContextoActual(ctx.ID().getText(), prototype);
@@ -233,22 +256,22 @@ public class MiListener extends compiladoresBaseListener {
 
     @Override
     public void enterBloque(BloqueContext ctx) {
-        if (ctx.getParent() instanceof DeclaracionFuncionContext) {
-            DeclaracionFuncionContext funcionContext = (DeclaracionFuncionContext)ctx.getParent();
+        if(ctx.getParent() instanceof DefinicionFuncionContext){
+            DefinicionFuncionContext funcionContext = (DefinicionFuncionContext)ctx.getParent();
             Id id = procesarFuncion(funcionContext);
             simbolos.agregarContexto();
-            if (id != null) {
+            if(id != null)
                 ((Funcion)id).getParametros().stream().forEach(param -> simbolos.agregarEnContextoActual(param.getTokenNombre(), param));
-            } else {
-                getParametros(funcionContext.parametrosDecl()).stream().forEach(param -> simbolos.agregarEnContextoActual(param.getTokenNombre(), param));
-            }
-        } else {
+            else
+                getParametros(funcionContext.parametros()).stream().forEach(param -> simbolos.agregarEnContextoActual(param.getTokenNombre(), param));
+        }else
             simbolos.agregarContexto();
-        }
     }
     
     @Override
     public void exitBloque(BloqueContext ctx) {
+        if(ctx.getParent() instanceof DefinicionFuncionContext)
+            procesarReturn((DefinicionFuncionContext)ctx.getParent());
         errores.idNoUsado(simbolos.idSinUsar());
         simbolos.quitarContexto();
     }
@@ -270,5 +293,4 @@ public class MiListener extends compiladoresBaseListener {
             procesarDeclaracion(ctx.declaracion());
         //System.out.println(simbolos);
     }
-
 }

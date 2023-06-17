@@ -16,28 +16,35 @@ LLA   : '{'  ;
 LLC   : '}'  ;
 CA    : '['  ;
 CC    : ']'  ;
-ASIGN : '='  ;
+IGUAL : '='  ;
+
 SUMA  : '+'  ;
 RESTA : '-'  ;
 MULT  : '*'  ;
 DIV   : '/'  ;
 MOD   : '%'  ;
+
 NOT   : '!'  ;
 AND   : '&&' ;
 OR    : '||' ;
+
 INCR  : '++' ;
 DECR  : '--' ;
 INCRI : '+=' ;
 DECRI : '-=' ;
-COMPARADOR: '==' | '!=' | '>' | '>=' | '<' | '<='  ;
+
+MAYOR     : '>'  ;
+MENOR     : '<'  ;
+MAY_IGUAL : '>=' ;
+MEN_IGUAL : '<=' ;
+EQUAL     : '==' ;
+DISTINTO  : '!=' ;
 
 // Bucles
 WHILE : 'while' ;
 IF    : 'if'    ;
 FOR   : 'for'   ;
 ELSE  : 'else'  ;
-
-RETURN: 'return';
 
 //Regla para los espacios en blanco
 WS : [ \n\t\r] -> skip ;
@@ -48,7 +55,9 @@ DECIMAL : ENTERO'.'ENTERO ;
 
 // Tipos de datos
 INT    : 'int'    ; 
-DOUBLE : 'double' ;                  
+DOUBLE : 'double' ;       
+
+RETURN : 'return' ;
 
 ID : (LETRA | '_')(LETRA | DIGITO | '_')* ;
 
@@ -62,155 +71,131 @@ instrucciones : instruccion instrucciones
               |
               ;
 
-instruccion : declaracion
-            | asignacion
-            | bloque
-            | iwhile
-            | iif
-            | ifor
-            | prototipoFuncion
-            | declaracionFuncion
-            | llamadaFuncion
-            ;
-
 bloque : LLA instrucciones LLC ;
 
+instruccion : declaracion PYC
+            | asignacion PYC
+            | ifor
+            | iwhile
+            | iif
+            | declaracionFuncion PYC
+            | definicionFuncion
+            | llamadaFuncion PYC
+            | retorno PYC
+            | bloque
+            ;
+
 /* ---------------------------------------------------- */
+
+retorno : RETURN opal;
 
 /* ------ Asignacion y declaracion de variables --------*/
 
-declaracion : tipoDato ID inicializacion listaid PYC ;
+declaracion : tipoDato ID
+            | tipoDato ID asign
+            ;
 
-asignacion : ID ASIGN expresion PYC ;
+asign : IGUAL operacion
+      ;
 
-inicializacion : ASIGN (ENTERO|DECIMAL)
-               |
-               ;
-
-listaid : COMA ID inicializacion listaid
-        |
-        ;
-
-tipoDato : INT 
+tipoDato : INT
          | DOUBLE
          ;
 
+asignacion  : ID asign
+            ;
+
 /* ---------------------------------------------------- */
 
-/* -------------------- Expresiones --------------------*/
+ifor : FOR PA asignacion PYC operacion PYC ID asign PC instruccion
+     ;
 
-expresion : termino exp ;
+iwhile : WHILE PA operacion PC instruccion
+       ;
 
-exp : SUMA  termino exp
-    | RESTA termino exp
-    |
+iif : IF PA operacion PC instruccion
+    | IF PA operacion PC bloque ELSE bloque
     ;
 
-termino : factor term ;
+/* ---------------------------------------------------- */
 
-term : MULT factor term
-     | DIV  factor term
-     | MOD  factor term
+/*---------------------- Funciones ---------------------*/
+
+declaracionFuncion : tipoDato ID PA parametros PC ;
+
+definicionFuncion : tipoDato ID PA parametros PC bloque ;
+
+parametros : param ;
+
+param : declaracion param 
+      | COMA declaracion param
+      |
+      ;
+
+llamadaFuncion : ID PA argumentos PC ;
+
+argumentos : operacion args ;
+
+args : COMA operacion args 
      |
      ;
 
-factor : (ENTERO|DECIMAL)
-       | ID
-       | PA expresion PC 
+operacion : opal ;
+
+opal : disyuncion
+     | 
+     ;
+
+disyuncion : conjuncion disy ;
+
+disy : OR conjuncion disy
+     | 
+     ;
+
+conjuncion : comparaciones conj ;
+
+conj : AND comparaciones conj
+     | 
+     ;
+
+comparaciones : expresion comp ;
+
+comp : opcomp expresion comp 
+     | 
+     ;
+
+opcomp : EQUAL
+       | DISTINTO
+       | MAYOR
+       | MAY_IGUAL
+       | MENOR
+       | MEN_IGUAL
        ;
 
-/* ---------------------------------------------------- */
+expresion : term exp;
 
-/*------------------ Bucle while e if ------------------*/
+exp : SUMA term exp
+    | RESTA term exp
+    |
+    ;
 
-iwhile : WHILE PA comparacion listacomp PC (bloque|instruccion);
+term : factor t ;
 
-iif : IF PA comparacion listacomp PC (bloque|instruccion) 
-    | IF PA comparacion listacomp PC bloque ELSE bloque;
+t : MULT factor t
+  | DIV factor t
+  | MOD factor t
+  |
+  ;
 
-comparacion : PA (ID|(ENTERO|DECIMAL)) COMPARADOR (ID|(ENTERO|DECIMAL)) PC
-            | (ID|(ENTERO|DECIMAL)) COMPARADOR (ID|(ENTERO|DECIMAL))
-            | NOT (ID|(ENTERO|DECIMAL))
-            | (ID|(ENTERO|DECIMAL))
-            ;
+factor : f PA opal PC
+       | f llamadaFuncion
+       | f ENTERO
+       | f DECIMAL
+       | f ID
+       ;
 
-listacomp : AND comparacion listacomp
-          | OR comparacion listacomp
-          |
-          ;
-
-/* ---------------------------------------------------- */
-
-/*---------------------- Bucle for ---------------------*/
-
-ifor : FOR PA declaracionFor PYC condicionFor PYC incrementoFor PC (bloque|instruccion) ;
-
-declaracionFor : tipoDato ID inicializacionFor listaidFor ;
-
-inicializacionFor : ASIGN (ENTERO|DECIMAL)
-                  |
-                  ;
-
-listaidFor : COMA ID inicializacionFor listaidFor
-           |
-           ;
-
-condicionFor : (ID|(ENTERO|DECIMAL)) COMPARADOR (ID|(ENTERO|DECIMAL)) ;
-
-incrementoFor : ID INCR listaIncrFor
-              | ID DECR listaIncrFor
-              | ID INCRI (ENTERO|DECIMAL) listaIncrFor
-              | ID DECRI (ENTERO|DECIMAL) listaIncrFor
-              |
-              ;
-
-listaIncrFor : COMA incrementoFor listaIncrFor 
-             |
-             ;
-
-/* ---------------------------------------------------- */
-
-/*----------------- Prototipo de funcion ---------------*/
-
-prototipoFuncion : tipoDato ID PA parametrosProt PC PYC
-                 ;
-
-parametrosProt : tipoDato ID listaParamProt 
-               | tipoDato listaParamProt
-               |
-               ;
-
-listaParamProt : COMA tipoDato listaParamProt
-               | COMA tipoDato ID listaParamProt
-               |
-               ;
-
-/* ---------------------------------------------------- */
-
-/* ---------- Implementacion de funciones --------------*/
-
-declaracionFuncion : tipoDato ID PA parametrosDecl PC bloque;
-
-parametrosDecl : tipoDato ID listaParamDecl
-               | 
-               ;
-
-listaParamDecl : COMA tipoDato ID listaParamDecl 
-               |
-               ;
-
-/* ---------------------------------------------------- */
-
-/* -------------- Llamadas a funciones -----------------*/
-
-llamadaFuncion : ID PA parametrosLlam PC PYC ;
-
-parametrosLlam : ID listaParamLlam 
-               |
-               ;
-
-listaParamLlam : COMA ID listaParamLlam 
-               |
-               ;
-
-/* ---------------------------------------------------- */
+f : SUMA
+  | RESTA
+  | NOT
+  |
+  ;

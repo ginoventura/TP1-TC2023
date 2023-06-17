@@ -1,2 +1,27 @@
-int x;
+int sumar(int x, int y);
+int restar(int x, int y);
+int sumar(int x, int y){
+    return x+y;
+}
 
+int funcion(){    
+    int x = 0
+    int y = 40 + 23;
+    int y = 5;
+
+    if(p<k || p==0){
+        int j = 80 * 15;
+        j = j + 1;
+    }
+
+    for(i=0;i<5 || i>8;i=i+2){
+        h = 3 * t;
+    }
+    int w;
+    w = sumar(h,y);
+
+}
+
+double mostrar(){
+
+}
